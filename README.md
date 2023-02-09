@@ -1,48 +1,55 @@
-Install weave works network plugins
-kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
-
-Installing on EKS
-EKS by default installs amazon-vpc-cni-k8s CNI. Please follow below steps to use Weave-net as CNI
+**Steps for Cluster Creation**
 
 
-delete amazon-vpc-cni-k8s daemonset by running kubectl delete ds aws-node -n kube-system command
+**Create EKS Cluster with version 1.2.4 and 2 node Group**
+Use terraform module for eks cluster creation
 
-edit instance security group to allow TCP 6783 and UDP 6783/6784 ports
+**Install Metric server**
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.6.2/components.yaml
 
-restart kube-proxy pods to reconfigure iptables
-
-Create namespace
-
+**Create Namespace casestudy-ns**
 kubectl create namsepace casestudy-ns
 
-deploy nginx deployment.yaml
+**Deploy Nginx Deployment**
 kubectl apply -f deployment.yaml
 
-deploy nginx service.yaml
+**Deploy Nginx Service**
 kubectl apply -f service.yaml
 
-Check node service
-curl --silent 34.219.239.128:31410  | grep title
+**Check node service**
+curl --silent ipaddr:31410  | grep title
 
-Apply network policy
+**Install weave works network plugins**
+kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
 
-Check again
+**Delete amazon-vpc-cni-k8s Daemonset**
+kubectl delete ds aws-node -n kube-system
 
-Create affinity , pod anti affinity
+**Apply Network Policy**
+kubectl apply -f networkpolicy.yaml
 
-create pdb
+**Apply HPA**
+kubectl apply -f hpa.yaml
 
-kubectl apply -f pdb
+**Create Pod disruption Budget**
+kubectl apply -f pdb.yaml
 
-test pdb
 
+**Test Pod disruption Budget**
 kubectl cordon nodename
 
 kubectl drain nodename --grace-period=300 --ignore-daemonsets=true
 
-kubectl config use-context <CONTEXT-NAME>
 
 
-HPA
 
-kubectl apply -f HPA.yaml
+**Notes**
+We would be using an existing eks cluster for test purpose as eks cluster creation takes more than 20 minutes also the terraform code is used to explain in depth terraform design and is the way to deploy a cluster in production environemnt. We have an existing vpc which would be used
+
+**Design Details**
+
+We have used deployment kubernetes object with two pod replicas and created node port service expose at port 31410 as node port services are allowed only between 30000 and 65000 range
+
+We have installed Weaveworks network agent as vpc cni aws eks plugin is not sufficent to create network policy
+
+Also we have installed metrics server as its is needed for hpa to function
